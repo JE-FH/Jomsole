@@ -1,0 +1,7 @@
+seperator = _{" " | "\t"}
+disallowCharacters = _{" " | "|" | "\""}
+pathCharacter = _{ !disallowCharacters ~ ANY }
+CommandPart = { pathCharacter+ }
+ExecuteCommand = {CommandPart ~ (seperator+ ~ CommandPart)* }
+CommandComposition = { ExecuteCommand ~ seperator* ~ SerialCommand?}
+SerialCommand = { "|" ~ seperator* ~ CommandComposition}
