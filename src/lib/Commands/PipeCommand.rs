@@ -6,7 +6,7 @@ pub struct PipeCommand {
 }
 
 impl PipeCommand {
-    pub fn new(left_command: Box<dyn Command>, right_command: Box<dyn command>) -> PipeCommand {
+    pub fn new(left_command: Box<dyn Command>, right_command: Box<dyn Command>) -> PipeCommand {
         return PipeCommand {
             left_command: left_command,
             right_command: right_command,

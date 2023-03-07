@@ -1,5 +1,5 @@
 seperator = _{" " | "\t"}
-disallowCharacters = _{" " | "|" | "\""}
+disallowCharacters = _{" " | "|" | "\"" | "\t"}
 pathCharacter = _{ !disallowCharacters ~ ANY }
 CommandPart = { pathCharacter+ }
 ExecuteCommand = {CommandPart ~ (seperator+ ~ CommandPart)* }
