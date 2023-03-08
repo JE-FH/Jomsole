@@ -3,7 +3,7 @@ use pest::{Parser, iterators::Pairs, iterators::Pair};
 use crate::lib::{CommandParser::{CommandParser, CommandParserError}, Command::Command, Commands::ExecuteCommand::ExecuteCommand};
 use crate::lib::Commands::PipeCommand::PipeCommand;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JshCommandParserError {
 	reason: String,
 }

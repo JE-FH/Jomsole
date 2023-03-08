@@ -1,7 +1,7 @@
 use std::io::{stdout, Stdout, Write};
 use std::process;
 use std::process::Stdio;
-use crate::lib::Command::Command;
+use crate::lib::Command::{Command, CommandError};
 
 pub struct ExecuteCommand {
     command_name: String,
@@ -15,58 +15,128 @@ impl ExecuteCommand {
             arguments: arguments
         };
 	}
+
+    fn create_command(&self) -> process::Command {
+        let mut proc = process::Command::new(self.command_name.clone());
+        proc.args(self.arguments.clone());
+        return proc;
+    }
 }
 
 impl Command for ExecuteCommand {
-    fn execute(&self) {
-        process::Command::new(self.command_name.clone())
-            .args(self.arguments.clone())
-            .spawn()
-            .expect("bob");
-    }
-
-    fn execute_redirected_output(&self) -> String {
-        let output = process::Command::new(self.command_name.clone())
-            .args(self.arguments.clone())
+    fn execute(&self) -> Result<i32, CommandError> {
+        let result = self.create_command()
             .stdin(Stdio::inherit())
-            .output()
-            .expect("bob");
-        return String::from_utf8(output.stdout).expect("invalid utf8");
+            .stdout(Stdio::inherit())
+            .spawn();
+        if let Err(err) = result {
+            return Err(CommandError::CouldNotExecute {
+                reason: err.to_string()
+            });
+        }
+
+        return match result.unwrap().wait() {
+            Err(err) => Err(CommandError::CouldNotExecute {
+                reason: err.to_string()
+            }),
+            Ok(exitStatus) => Ok(exitStatus.code().unwrap())
+        }
     }
 
-    fn execute_redirected_input(&self, input: &str) {
-        let mut process = process::Command::new(self.command_name.clone())
-            .args(self.arguments.clone())
+    fn execute_redirected_output(&self) -> Result<(i32, String), CommandError> {
+        let result = self.create_command()
+            .stdin(Stdio::inherit())
+            .output();
+
+        return match result {
+            Err(err) => Err(
+                CommandError::CouldNotExecute {
+                    reason: err.to_string()
+                }
+            ),
+            Ok(output) => Ok((
+                output.status.code().expect("Process code should be available since the process exited"),
+                String::from_utf8(output.stdout).expect("invalid utf8")
+            ))
+        }
+    }
+
+    fn execute_redirected_input(&self, input: &str) -> Result<i32, CommandError> {
+        let mut child_result = self.create_command()
             .stdin(Stdio::piped())
             .stdout(Stdio::inherit())
-            .spawn()
-            .expect("bob");
+            .spawn();
 
-        let mut stdin = process.stdin.take();
-        stdin.unwrap().write(input.as_bytes()).expect("bob");
+        if let Err(err) = child_result {
+            return Err(CommandError::CouldNotExecute {
+                reason: err.to_string()
+            });
+        }
 
-        process.wait().expect("penis");
+        let mut child = child_result.unwrap();
+
+        let mut stdin = child.stdin
+            .take()
+            .expect("stdin should be available since stdin has been set to piped");
+
+        if let Err(err) = stdin.write(input.as_bytes()) {
+            return Err(CommandError::CouldNotExecute {
+                reason: err.to_string()
+            });
+        }
+
+        return match child.wait() {
+            Err(err) => Err(
+                CommandError::CouldNotExecute {
+                    reason: err.to_string()
+                }
+            ),
+            Ok(exit_status) => Ok(exit_status.code()
+                .expect("exit code should be available since the process exited")
+            )
+        }
     }
 
-    fn execute_redirected_io(&self, input: &str) -> String {
-        let mut process = process::Command::new(self.command_name.clone())
-            .args(self.arguments.clone())
+    fn execute_redirected_io(&self, input: &str) -> Result<(i32, String), CommandError> {
+        let mut child_result = self.create_command()
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .spawn()
-            .expect("bob");
+            .spawn();
 
+        if let Err(err) = child_result {
+            return Err(CommandError::CouldNotExecute {
+                reason: err.to_string()
+            });
+        }
+
+        let mut child = child_result.unwrap();
+
+        let mut stdin = child.stdin
+            .take()
+            .expect("stdin should be available since stdin has been set to piped");
+
+        if let Err(err) = stdin.write(input.as_bytes()) {
+            return Err(CommandError::CouldNotExecute {
+                reason: err.to_string()
+            });
+        }
 
         let input_clone = String::from(input);
-        let mut stdin = process.stdin.take().expect("failed to get stdin");
+
         std::thread::spawn(move || {
             stdin.write_all(input_clone.as_bytes()).expect("failed to write to stdin");
         });
 
-        let output = process
-            .wait_with_output()
-            .expect("penis");
-
-        return String::from_utf8(output.stdout).expect("invalid utf8")
+        return match child.wait_with_output() {
+            Err(err) => Err(
+                CommandError::CouldNotExecute {
+                    reason: err.to_string()
+                }
+            ),
+            Ok(output) => Ok((
+                output.status.code().expect("Process code should be available since the process exited"),
+                String::from_utf8(output.stdout).expect("invalid utf8")
+            ))
+        }
     }
 }

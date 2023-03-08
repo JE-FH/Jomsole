@@ -1,4 +1,5 @@
 use std::{thread, time};
+use crate::lib::Command::CommandError;
 
 use super::{CommandParser::{CommandParser, CommandParserError}, CommandInterface::CommandInterface};
 
@@ -29,12 +30,26 @@ impl<
 
 	fn do_one_command(&self) {
 		let command_text = self.command_interface.read_command("> ");
-		let command = self.command_parser.parse_command(&command_text);
-		if (!command.is_ok()) {
-			println!("Error occured: {}", command.err().unwrap().describe())
-		} else {
-			command.ok().unwrap().execute();
+		let command_result = self.command_parser.parse_command(&command_text);
+		let command = match command_result {
+			Err(err) => {
+				println!("Error occured: {}", err.describe());
+				return;
+			},
+			Ok(command) => {
+				command
+			}
+		};
+
+		let execution_result = command.execute();
+		if let Err(err) = execution_result {
+			match err {
+				CommandError::CouldNotExecute {reason} => {
+					println!("Error: {}", reason);
+				}
+			}
 		}
+
 		thread::sleep(time::Duration::from_millis(1000));
 	}
 }

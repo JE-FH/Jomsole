@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use super::Commands;
 use super::Command::Command;
 use super::Commands::ExecuteCommand::ExecuteCommand;
@@ -10,7 +11,7 @@ pub trait CommandParserError {
 }
 
 pub trait CommandParser {
-	type TCommandParserError: CommandParserError;
+	type TCommandParserError: CommandParserError + Debug + Clone;
 
 	fn parse_command(&self, command: &str) -> Result<Box<dyn Command>, Self::TCommandParserError>;
 }
