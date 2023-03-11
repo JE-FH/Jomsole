@@ -4,3 +4,5 @@ pub mod Command;
 pub mod CommandInterface;
 mod Commands;
 pub mod jsh;
+mod PathResolver;
+pub mod nt;

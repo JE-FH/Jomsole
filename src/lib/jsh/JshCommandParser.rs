@@ -76,7 +76,7 @@ impl JshCommandParser {
 
 		let next = optional_next.unwrap();
 
-		if (next.as_rule() == Rule::SerialCommand) {
+		if next.as_rule() == Rule::SerialCommand {
 			let left_command = self.compose_serial_command(next)?;
 			return Ok(Box::new(PipeCommand::new(left_command, first_command)));
 		}
@@ -96,13 +96,13 @@ impl JshCommandParser {
 		assert_rule_type(&command, Rule::ExecuteCommand, "Expected execute command");
 
 		let mut inner = command.into_inner();
-		let next = get_next_or_err!(inner, Rule::CommandPart, "Expected command part");
+		let next = get_next_or_err!(inner, Rule::Operation, "Expected command part");
 
 		let command_name = next.as_str().to_string();
 		let mut arguments = Vec::<String>::new();
 
 		for command in inner {
-			if (command.as_rule() != Rule::CommandPart) {
+			if (command.as_rule() != Rule::Argument) {
 				return Err(JshCommandParserError::new("Expected command part".to_string()));
 			}
 			arguments.push(command.as_str().to_string());

@@ -1,4 +1,5 @@
 use std::io::{stdout, Stdout, Write};
+use std::path::Path;
 use std::process;
 use std::process::Stdio;
 use crate::lib::Command::{Command, CommandError};
@@ -16,19 +17,31 @@ impl ExecuteCommand {
         };
 	}
 
-    fn create_command(&self) -> process::Command {
-        let mut proc = process::Command::new(self.command_name.clone());
+    fn create_command(&self) -> Result<process::Command, CommandError> {
+        let canonicalized_path = match Path::new(&self.command_name).canonicalize() {
+            Ok(path) => Ok(path),
+            Err(err) => Err(CommandError::CouldNotExecute {
+                reason: err.to_string()
+            })
+        }?.into_os_string();
+
+        let mut proc = process::Command::new(canonicalized_path);
+
         proc.args(self.arguments.clone());
-        return proc;
+
+        println!("{:?}", proc.get_program());
+
+        return Ok(proc);
     }
 }
 
 impl Command for ExecuteCommand {
     fn execute(&self) -> Result<i32, CommandError> {
-        let result = self.create_command()
+        let result = self.create_command()?
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .spawn();
+
         if let Err(err) = result {
             return Err(CommandError::CouldNotExecute {
                 reason: err.to_string()
@@ -44,7 +57,7 @@ impl Command for ExecuteCommand {
     }
 
     fn execute_redirected_output(&self) -> Result<(i32, String), CommandError> {
-        let result = self.create_command()
+        let result = self.create_command()?
             .stdin(Stdio::inherit())
             .output();
 
@@ -62,7 +75,7 @@ impl Command for ExecuteCommand {
     }
 
     fn execute_redirected_input(&self, input: &str) -> Result<i32, CommandError> {
-        let mut child_result = self.create_command()
+        let mut child_result = self.create_command()?
             .stdin(Stdio::piped())
             .stdout(Stdio::inherit())
             .spawn();
@@ -98,7 +111,7 @@ impl Command for ExecuteCommand {
     }
 
     fn execute_redirected_io(&self, input: &str) -> Result<(i32, String), CommandError> {
-        let mut child_result = self.create_command()
+        let mut child_result = self.create_command()?
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .spawn();
