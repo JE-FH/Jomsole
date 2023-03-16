@@ -1,10 +1,11 @@
 seperator = _{" " | "\t"}
 disallowCharacters = _{" " | "|" | "\"" | "\t"}
 pathCharacter = _{ !disallowCharacters ~ ANY }
+LocalCommandPrefix = _{ "./"}
 Argument = { pathCharacter+ }
-LocalOperation = { "./" ~ pathCharacter+ }
-AnyOperation = { !"./" ~ pathCharacter+ }
-Operation = { LocalOperation | AnyOperation }
-ExecuteCommand = {Operation ~ (seperator+ ~ Argument)* }
+LocalScopeCommand = { LocalCommandPrefix ~ Argument }
+AnyScopeCommand = { !LocalCommandPrefix ~ Argument }
+ScopedCommand = { LocalScopeCommand | AnyScopeCommand }
+ExecuteCommand = {ScopedCommand ~ (seperator+ ~ Argument)* }
 CommandComposition = { ExecuteCommand ~ seperator* ~ SerialCommand?}
 SerialCommand = { "|" ~ seperator* ~ CommandComposition}

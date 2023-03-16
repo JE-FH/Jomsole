@@ -3,8 +3,6 @@ use std::path::Path;
 use crate::lib::Command::CommandError;
 
 pub trait PathResolver {
-    //Should provide a direct path to the
-    fn resolve(given_path: &Path) -> Result<OsString, CommandError> {
-
-    }
+    fn resolve_command_global(&self, given_path: &str) -> Result<OsString, CommandError>;
+    fn resolve_command_local(&self, current_directory: &Path, given_path: &str) -> Result<OsString, CommandError>;
 }

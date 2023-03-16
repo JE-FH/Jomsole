@@ -1,24 +1,33 @@
 use std::{thread, time};
 use crate::lib::Command::CommandError;
+use crate::lib::PathResolver::PathResolver;
 
 use super::{CommandParser::{CommandParser, CommandParserError}, CommandInterface::CommandInterface};
 
 pub struct Jomsole< 
 	TCommandParser: CommandParser,
 	TCommandInterface: CommandInterface,
+	TPathResolver: PathResolver,
 > {
 	command_parser: TCommandParser,
-	command_interface: TCommandInterface
+	command_interface: TCommandInterface,
+	path_resolver: TPathResolver
 }
 
 impl<
 	TCommandParser: CommandParser, 
-	TCommandInterface: CommandInterface
-> Jomsole<TCommandParser, TCommandInterface> {
-	pub fn new(command_parser: TCommandParser, command_interface: TCommandInterface) -> Jomsole<TCommandParser, TCommandInterface> {
+	TCommandInterface: CommandInterface,
+	TPathResolver: PathResolver
+> Jomsole<TCommandParser, TCommandInterface, TPathResolver> {
+	pub fn new(
+		command_parser: TCommandParser,
+		command_interface: TCommandInterface,
+		path_resolver: TPathResolver
+	) -> Jomsole<TCommandParser, TCommandInterface, TPathResolver> {
 		return Jomsole {
 			command_parser: command_parser,
-			command_interface: command_interface
+			command_interface: command_interface,
+			path_resolver: path_resolver
 		};
 	}
 

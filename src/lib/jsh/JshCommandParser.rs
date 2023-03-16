@@ -1,7 +1,10 @@
+use std::rc::Rc;
 use pest::{Parser, iterators::Pairs, iterators::Pair};
 
 use crate::lib::{CommandParser::{CommandParser, CommandParserError}, Command::Command, Commands::ExecuteCommand::ExecuteCommand};
+use crate::lib::Commands::ExecuteCommand::CommandScope;
 use crate::lib::Commands::PipeCommand::PipeCommand;
+use crate::lib::PathResolver::PathResolver;
 
 #[derive(Debug, Clone)]
 pub struct JshCommandParserError {
@@ -21,7 +24,7 @@ impl CommandParserError for JshCommandParserError {
 }
 
 pub struct JshCommandParser {
-
+	path_resolver: Rc<dyn PathResolver>
 }
 
 macro_rules! get_next_or_err {
@@ -42,7 +45,6 @@ macro_rules! get_next_or_err {
 #[grammar = "lib/jsh.pest"]
 struct JshParser;
 
-
 fn assert_rule_type(pair: &Pair<Rule>, rule: Rule, error: &str) -> Result<(), JshCommandParserError> {
 	if (pair.as_rule() != rule) {
 		return Err(JshCommandParserError::new(error.to_string()));
@@ -51,8 +53,10 @@ fn assert_rule_type(pair: &Pair<Rule>, rule: Rule, error: &str) -> Result<(), Js
 }
 
 impl JshCommandParser {
-	pub fn new() -> JshCommandParser {
-		return JshCommandParser {};
+	pub fn new(path_resolver: Rc<dyn PathResolver>) -> JshCommandParser {
+		return JshCommandParser {
+			path_resolver: path_resolver
+		};
 	}
 
 	pub fn compose_command_from_composition(&self, target: Pair<Rule>) -> Result<Box<dyn Command>, JshCommandParserError> {
@@ -93,12 +97,13 @@ impl JshCommandParser {
 	}
 
 	fn compose_command_from_execute_command(&self, command: Pair<Rule>) -> Result<Box<dyn Command>, JshCommandParserError> {
-		assert_rule_type(&command, Rule::ExecuteCommand, "Expected execute command");
+		assert_rule_type(&command, Rule::ExecuteCommand, "Expected execute command")?;
 
 		let mut inner = command.into_inner();
-		let next = get_next_or_err!(inner, Rule::Operation, "Expected command part");
+		let next = get_next_or_err!(inner, Rule::ScopedCommand, "Expected command part");
 
-		let command_name = next.as_str().to_string();
+		let (command_name, command_scope) = self.scoped_command(next)?;
+
 		let mut arguments = Vec::<String>::new();
 
 		for command in inner {
@@ -108,7 +113,23 @@ impl JshCommandParser {
 			arguments.push(command.as_str().to_string());
 		}
 
-		return Ok(Box::new(ExecuteCommand::new(command_name, arguments)));
+		return Ok(Box::new(ExecuteCommand::new(command_name, command_scope, arguments, self.path_resolver.clone())));
+	}
+
+	fn scoped_command(&self, scoped_command: Pair<Rule>) -> Result<(String, CommandScope), JshCommandParserError> {
+		assert_rule_type(&scoped_command, Rule::ScopedCommand, "Expected execute command")?;
+		let mut inner = scoped_command.into_inner();
+
+		let next = match inner.next() {
+			Some(command) => command,
+			None => { return Err(JshCommandParserError::new("Expected local scope command or any scope command".to_string()));}
+		};
+
+		return match next.as_rule() {
+			Rule::LocalScopeCommand => Ok((next.as_str().to_string(), CommandScope::LOCAL)),
+			Rule::AnyScopeCommand => Ok((next.as_str().to_string(), CommandScope::ANY)),
+			_ => Err(JshCommandParserError::new("Expected local scope command or any scope command".to_string()))
+		};
 	}
 }
 

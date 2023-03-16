@@ -1,31 +1,57 @@
+use std::env::current_dir;
 use std::io::{stdout, Stdout, Write};
 use std::path::Path;
 use std::process;
 use std::process::Stdio;
+use std::rc::Rc;
 use crate::lib::Command::{Command, CommandError};
+use crate::lib::PathResolver::PathResolver;
+
+pub enum CommandScope {
+    LOCAL,
+    ANY
+}
 
 pub struct ExecuteCommand {
-    command_name: String,
-    arguments: Vec<String>
+    command_executable: String,
+    command_scope: CommandScope,
+    arguments: Vec<String>,
+    path_resolver: Rc<dyn PathResolver>
 }
 
 impl ExecuteCommand {
-	pub fn new(command_name: String, arguments: Vec<String>) -> ExecuteCommand {
+	pub fn new(
+        command_name: String,
+        command_scope: CommandScope,
+        arguments: Vec<String>,
+        path_resolver: Rc<dyn PathResolver>
+    ) -> ExecuteCommand {
 		return ExecuteCommand {
-            command_name: command_name,
-            arguments: arguments
+            command_executable: command_name,
+            command_scope: command_scope,
+            arguments: arguments,
+            path_resolver: path_resolver
         };
 	}
 
     fn create_command(&self) -> Result<process::Command, CommandError> {
-        let canonicalized_path = match Path::new(&self.command_name).canonicalize() {
-            Ok(path) => Ok(path),
-            Err(err) => Err(CommandError::CouldNotExecute {
-                reason: err.to_string()
-            })
-        }?.into_os_string();
+        let proc_path = match self.command_scope {
+            CommandScope::LOCAL => {
+                self.path_resolver.resolve_command_local(
+                    Path::new(current_dir()
+                        .expect("Should be able to get current directory").as_path()
+                    ),
+                    &self.command_executable
+                )?
+            },
+            CommandScope::ANY => {
+                self.path_resolver.resolve_command_global(
+                    &self.command_executable
+                )?
+            }
+        };
 
-        let mut proc = process::Command::new(canonicalized_path);
+        let mut proc = process::Command::new(proc_path);
 
         proc.args(self.arguments.clone());
 
