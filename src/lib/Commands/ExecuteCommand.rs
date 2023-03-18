@@ -55,8 +55,6 @@ impl ExecuteCommand {
 
         proc.args(self.arguments.clone());
 
-        println!("{:?}", proc.get_program());
-
         return Ok(proc);
     }
 }
@@ -78,7 +76,7 @@ impl Command for ExecuteCommand {
             Err(err) => Err(CommandError::CouldNotExecute {
                 reason: err.to_string()
             }),
-            Ok(exitStatus) => Ok(exitStatus.code().unwrap())
+            Ok(exit_status) => Ok(exit_status.code().unwrap())
         }
     }
 

@@ -15,9 +15,7 @@ extern crate pest_derive;
 
 fn main() {
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(LevelFilter::Trace));
-info!("bomg");
-    debug!("fuq");
+        .map(|()| log::set_max_level(LevelFilter::Off));
 
     let path_resolver = if cfg!(windows) {
         Rc::new(WindowsPathResolver::new())

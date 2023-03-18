@@ -39,6 +39,9 @@ impl<
 
 	fn do_one_command(&self) {
 		let command_text = self.command_interface.read_command("> ");
+		if command_text.len() == 0 {
+			return;
+		}
 		let command_result = self.command_parser.parse_command(&command_text);
 		let command = match command_result {
 			Err(err) => {
@@ -57,8 +60,8 @@ impl<
 					println!("Error: {}", reason);
 				}
 			}
+		} else {
+			println!("Program exited with code {}", execution_result.unwrap());
 		}
-
-		thread::sleep(time::Duration::from_millis(1000));
 	}
 }

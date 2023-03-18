@@ -12,22 +12,22 @@ use super::super::PathResolver::{PathResolver};
 
 pub struct WindowsPathResolver {
     path: Vec<OsString>,
-    extensions: HashMap<OsString, usize>
+    extensions: Vec<OsString>
 }
 
 fn split_vec(target: &[u16], splitter: u16) -> Vec<&[u16]> {
-    let mut last_slice_end: usize = 0;
+    let mut next_slice_begin: usize = 0;
     let mut rv = Vec::new();
     for i in 0..target.len() {
         if target[i] == splitter {
-            if last_slice_end + 1 < i {
-                rv.push(&target[last_slice_end + 1..i]);
+            if next_slice_begin < i {
+                rv.push(&target[next_slice_begin..i]);
             }
-            last_slice_end = i;
+            next_slice_begin = i + 1;
         }
     }
-    if last_slice_end + 1 < target.len() {
-        rv.push(&target[last_slice_end + 1..target.len()]);
+    if next_slice_begin < target.len() {
+        rv.push(&target[next_slice_begin..target.len()]);
     }
     return rv;
 }
@@ -46,21 +46,18 @@ pub fn new() -> WindowsPathResolver {
         None => Vec::new()
     };
 
-    let extension_ordering = match env::var_os("PATHEXT") {
+    let mut extensions = match env::var_os("PATHEXT") {
         Some(path) => {
             let character_array: Vec<u16> = path.encode_wide().collect();
                 split_vec( character_array.as_slice(), SEMICOLON_ENCODING)
                     .iter()
-                    .map(|pp| OsString::from_wide(pp).make_ascii_lowercase())
+                    .map(|pp| OsString::from_wide(pp))
                     .collect()
         },
         None => Vec::new()
     };
 
-    let extensions = HashMap::from_iter(
-        extension_ordering.into_iter().enumerate()
-                .map(|(i, ext)| (ext, i))
-    );
+    extensions.push(OsString::new());
 
     return WindowsPathResolver {
         path: path,
@@ -70,44 +67,19 @@ pub fn new() -> WindowsPathResolver {
 
 impl WindowsPathResolver {
     fn look_in_directory(&self, directory: &OsString, command_name: &str) -> Option<OsString> {
-        match read_dir(directory) {
-            Err(e) => None,
-            Ok(dir) => {
-                let candidate_extension = dir
-                    .filter_map(|r| match r {
-                        Ok(t) => Some(t.path()),
-                        Err(t) => None
-                    })
-                    .filter_map(|p| match p.extension() {
-                        Some(ext) => Some(p),
-                        None => None
-                    })
-                    .filter_map(|p| {
-                        info!("{:?}", p.file_stem().expect(""));
-                        if p.file_stem().expect("Should be able to get file name") == command_name && p.is_file() {
-                            let ext =  p.extension().expect("Was already filtered").to_os_string();
-                            return Some((p, ext));
-                        }
-                        return None;
-                    })
-                    .fold(None, |current_opt: Option<(usize, (PathBuf, OsString))>, ext| {
-                        info!("{:?}", ext);
-                        let newMin = self.extensions.get(&ext.1).expect("Already checked").clone();
-                        if let Some(current) = current_opt {
-                            if newMin < current.0 {
-                                return Some((newMin, ext));
-                            }
-                            return Some(current);
-                        } else {
-                            return Some((newMin, ext));
-                        }
-                    });
-                match candidate_extension {
-                    Some((_, p)) => Some(p.0.into_os_string()),
-                    None => None,
-                }
-            }
+        let testing_path = Path::new(directory).join(command_name).into_os_string();
+        for extension in &self.extensions {
+            let mut path_with_extension = testing_path.clone();
+            path_with_extension.push(extension);
+            match Path::new(&path_with_extension).canonicalize() {
+                Ok(p) => {
+                    return Some(p.into_os_string())
+                },
+                _ => {}
+            };
         }
+
+        return None;
     }
 }
 

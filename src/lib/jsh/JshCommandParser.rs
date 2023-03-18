@@ -110,10 +110,35 @@ impl JshCommandParser {
 			if (command.as_rule() != Rule::Argument) {
 				return Err(JshCommandParserError::new("Expected command part".to_string()));
 			}
-			arguments.push(command.as_str().to_string());
+			arguments.push(self.parse_argument(command)?);
 		}
 
 		return Ok(Box::new(ExecuteCommand::new(command_name, command_scope, arguments, self.path_resolver.clone())));
+	}
+
+	fn parse_argument(&self, argument: Pair<Rule>) -> Result<String, JshCommandParserError> {
+		let mut inner = argument.into_inner();
+		let next = inner.next();
+		match next {
+			Some(argument) => {
+				match argument.as_rule() {
+					Rule::PlainArgument => Ok(argument.as_str().to_string()),
+					Rule::QuotedArgument => Ok(self.parse_quoted_argument(argument)?),
+					_ => Err(JshCommandParserError::new("Expected plain argument or quoted argument".to_string()))
+				}
+			},
+			None => Err(JshCommandParserError::new("Expected plain argument or quoted argument".to_string()))
+		}
+	}
+
+	fn parse_quoted_argument(&self, plain_argument: Pair<Rule>) -> Result<String, JshCommandParserError> {
+		if (plain_argument.as_rule() != Rule::QuotedArgument) {
+			return Err(JshCommandParserError::new("Expected quoted argument".to_string()));
+		}
+		let mut inner = plain_argument.into_inner();
+		let next = get_next_or_err!(inner, Rule::QuotedContent, "Expected quoted argument");
+
+		return Ok(next.as_str().to_string());
 	}
 
 	fn scoped_command(&self, scoped_command: Pair<Rule>) -> Result<(String, CommandScope), JshCommandParserError> {
@@ -126,10 +151,17 @@ impl JshCommandParser {
 		};
 
 		return match next.as_rule() {
-			Rule::LocalScopeCommand => Ok((next.as_str().to_string(), CommandScope::LOCAL)),
-			Rule::AnyScopeCommand => Ok((next.as_str().to_string(), CommandScope::ANY)),
+			Rule::LocalScopeCommand => Ok((self.parse_argument(next)?, CommandScope::LOCAL)),
+			Rule::AnyScopeCommand => Ok((self.parse_any_scoped_command(next)?, CommandScope::ANY)),
 			_ => Err(JshCommandParserError::new("Expected local scope command or any scope command".to_string()))
 		};
+	}
+
+	fn parse_any_scoped_command(&self, command: Pair<Rule>) -> Result<String, JshCommandParserError> {
+		let mut inner = command.into_inner();
+		let next = get_next_or_err!(inner, Rule::Argument, "Expected argument");
+
+		return self.parse_argument(next);
 	}
 }
 
