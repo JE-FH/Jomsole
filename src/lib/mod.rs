@@ -6,3 +6,4 @@ mod Commands;
 pub mod jsh;
 mod PathResolver;
 pub mod nt;
+pub mod SimpleLogger;
