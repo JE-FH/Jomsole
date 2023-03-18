@@ -1,4 +1,4 @@
-seperator = _{" " | "\t"}
+separator = _{" " | "\t"}
 disallowCharacters = _{" " | "|" | "\"" | "\t"}
 pathCharacter = _{ !disallowCharacters ~ ANY }
 LocalCommandPrefix = _{ "./"}
@@ -6,6 +6,6 @@ Argument = { pathCharacter+ }
 LocalScopeCommand = { LocalCommandPrefix ~ Argument }
 AnyScopeCommand = { !LocalCommandPrefix ~ Argument }
 ScopedCommand = { LocalScopeCommand | AnyScopeCommand }
-ExecuteCommand = {ScopedCommand ~ (seperator+ ~ Argument)* }
-CommandComposition = { ExecuteCommand ~ seperator* ~ SerialCommand?}
-SerialCommand = { "|" ~ seperator* ~ CommandComposition}
+ExecuteCommand = {ScopedCommand ~ (separator+ ~ Argument)* }
+CommandComposition = { ExecuteCommand ~ separator* ~ SerialCommand?}
+SerialCommand = { "|" ~ separator* ~ CommandComposition}
