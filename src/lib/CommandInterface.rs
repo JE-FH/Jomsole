@@ -16,8 +16,6 @@ impl Ecma48CommandInterface {
 
 impl CommandInterface for Ecma48CommandInterface {
 	fn read_command(&self, prompt: &str) -> String {
-		/*std::io::stdout().write("\x1B[2J".as_bytes()).unwrap();
-		std::io::stdout().write("\x1B[H".as_bytes()).unwrap();*/
 		std::io::stdout().write("\n".as_bytes()).unwrap();
 		std::io::stdout().write(prompt.as_bytes()).unwrap();
 
