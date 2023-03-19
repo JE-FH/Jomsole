@@ -1,6 +1,9 @@
 mod lib;
 
+use std::env::{current_dir, set_current_dir};
+use std::fs::read_dir;
 use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::rc::Rc;
 use log::{debug, info, LevelFilter};
@@ -35,6 +38,79 @@ fn main() {
             ostream.write(" ".as_bytes());
         }
         ostream.write("\n".as_bytes());
+        return 0;
+    });
+
+    builtin_command_repo.add_simple_command("ls".to_string(), |arguments, istream, ostream| {
+        let given_dir = arguments.join(" ");
+        let path_to_set = if Path::new(&given_dir).is_absolute() {
+            PathBuf::from(&given_dir)
+        } else {
+            match current_dir() {
+                Ok(dir) => dir.join(given_dir),
+                Err(err) => {
+                    ostream.write(err.to_string().as_bytes());
+                    ostream.write("\nPlease use an absolute path\n".as_bytes());
+                    return 1;
+                }
+            }
+        };
+
+        match read_dir(path_to_set) {
+            Ok(dirs) => dirs.for_each(|entry| {
+                match entry {
+                    Ok(entry) => {
+                        ostream.write(entry.file_name().to_string_lossy().as_bytes());
+                        ostream.write("\n".as_bytes());
+                    },
+                    Err(err) => {
+                        ostream.write(format!("<error: {}>\n", err.to_string()).as_bytes());
+                    }
+                }
+            }),
+            Err(err) => {
+                ostream.write(err.to_string().as_bytes());
+                ostream.write("\n".as_bytes());
+                return 1;
+            }
+        }
+
+        return 0;
+    });
+
+    builtin_command_repo.add_simple_command("cd".to_string(), |arguments, istream, ostream| {
+        let given_dir = arguments.join(" ");
+        let path_to_set = if Path::new(&given_dir).is_absolute() {
+            PathBuf::from(&given_dir)
+        } else {
+            match current_dir() {
+                Ok(dir) => dir.join(given_dir),
+                Err(err) => {
+                    ostream.write(err.to_string().as_bytes());
+                    ostream.write("\nPlease use an absolute path\n".as_bytes());
+                    return 1;
+                }
+            }
+        };
+
+        match path_to_set.canonicalize() {
+            Ok(dir) => {
+                match set_current_dir(dir) {
+                    Ok(_) => (),
+                    Err(err) => {
+                        ostream.write(err.to_string().as_bytes());
+                        ostream.write("\n".as_bytes());
+                        return 1;
+                    }
+                }
+            },
+            Err(err) => {
+                ostream.write(err.to_string().as_bytes());
+                ostream.write("\n".as_bytes());
+                return 1;
+            }
+        };
+
         return 0;
     });
 

@@ -16,10 +16,14 @@ impl DefaultContextGenerator {
             Err(e) => "<Directory unavailable>".to_string(),
         }
     }
+
+    fn generate_identity_fragment(&self) -> String {
+        return format!("{}@{}", whoami::username(), whoami::devicename());
+    }
 }
 
 impl ContextGenerator for DefaultContextGenerator {
     fn generate_context_text(&self) -> String {
-        return format!("{}", self.generate_current_dir_fragment());
+        return format!("\x1B[32m{}\x1B[0m \x1B[34m{}\x1B[0m", self.generate_identity_fragment(), self.generate_current_dir_fragment());
     }
 }
