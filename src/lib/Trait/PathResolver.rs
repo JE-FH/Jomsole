@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 use std::path::Path;
-use crate::lib::Command::CommandError;
+use crate::lib::Trait::Command::CommandError;
 
 pub trait PathResolver {
     fn resolve_command_global(&self, command_name: &str) -> Result<OsString, CommandError>;

@@ -1,5 +1,4 @@
-use crate::lib::Command::{Command, CommandError};
-use crate::lib::Command::CommandError::CouldNotExecute;
+use crate::lib::Trait::Command::{Command, CommandError};
 
 pub struct PipeCommand {
     left_command: Box<dyn Command>,
@@ -28,24 +27,24 @@ impl Command for PipeCommand {
     fn execute(&self) -> Result<i32, CommandError> {
         let out = self.right_command.execute_redirected_output()?;
         self.check_exit_code(out.0, "Exit code from chained process was not 0")?;
-        return self.left_command.execute_redirected_input(&out.1);
+        return self.left_command.execute_redirected_input(out.1);
     }
 
-    fn execute_redirected_output(&self) -> Result<(i32, String), CommandError> {
+    fn execute_redirected_output(&self) -> Result<(i32, Vec<u8>), CommandError> {
         let out = self.right_command.execute_redirected_output()?;
         self.check_exit_code(out.0, "Exit code from chained process was not 0")?;
-        return self.left_command.execute_redirected_io(&out.1);
+        return self.left_command.execute_redirected_io(out.1);
     }
 
-    fn execute_redirected_input(&self, input: &str) -> Result<i32, CommandError> {
+    fn execute_redirected_input(&self, input: Vec<u8>) -> Result<i32, CommandError> {
         let out = self.right_command.execute_redirected_io(input)?;
         self.check_exit_code(out.0, "Exit code from chained process was not 0")?;
-        return self.left_command.execute_redirected_input(&out.1);
+        return self.left_command.execute_redirected_input(out.1);
     }
 
-    fn execute_redirected_io(&self, input: &str) -> Result<(i32, String), CommandError> {
+    fn execute_redirected_io(&self, input: Vec<u8>) -> Result<(i32, Vec<u8>), CommandError> {
         let out = self.right_command.execute_redirected_io(input)?;
         self.check_exit_code(out.0, "Exit code from chained process was not 0")?;
-        return self.left_command.execute_redirected_io(&out.1);
+        return self.left_command.execute_redirected_io(out.1);
     }
 }

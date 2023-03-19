@@ -1,9 +1,9 @@
 pub mod Jomsole;
-pub mod CommandParser;
-pub mod Command;
-pub mod CommandInterface;
-mod Commands;
 pub mod jsh;
-mod PathResolver;
 pub mod nt;
 pub mod SimpleLogger;
+pub mod DefaultContextGenerator;
+pub mod Trait;
+mod Commands;
+pub mod JshCommandRepository;
+pub mod Ecma48CommandInterface;

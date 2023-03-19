@@ -4,9 +4,10 @@ use std::path::Path;
 use std::process;
 use std::process::Stdio;
 use std::rc::Rc;
-use crate::lib::Command::{Command, CommandError};
-use crate::lib::PathResolver::PathResolver;
+use crate::lib::Trait::Command::{Command, CommandError};
+use crate::lib::Trait::PathResolver::PathResolver;
 
+#[derive(PartialEq)]
 pub enum CommandScope {
     LOCAL,
     ANY
@@ -80,7 +81,7 @@ impl Command for ExecuteCommand {
         }
     }
 
-    fn execute_redirected_output(&self) -> Result<(i32, String), CommandError> {
+    fn execute_redirected_output(&self) -> Result<(i32, Vec<u8>), CommandError> {
         let result = self.create_command()?
             .stdin(Stdio::inherit())
             .output();
@@ -93,12 +94,12 @@ impl Command for ExecuteCommand {
             ),
             Ok(output) => Ok((
                 output.status.code().expect("Process code should be available since the process exited"),
-                String::from_utf8(output.stdout).expect("invalid utf8")
+                output.stdout
             ))
         }
     }
 
-    fn execute_redirected_input(&self, input: &str) -> Result<i32, CommandError> {
+    fn execute_redirected_input(&self, input: Vec<u8>) -> Result<i32, CommandError> {
         let mut child_result = self.create_command()?
             .stdin(Stdio::piped())
             .stdout(Stdio::inherit())
@@ -116,7 +117,7 @@ impl Command for ExecuteCommand {
             .take()
             .expect("stdin should be available since stdin has been set to piped");
 
-        if let Err(err) = stdin.write(input.as_bytes()) {
+        if let Err(err) = stdin.write(input.as_slice()) {
             return Err(CommandError::CouldNotExecute {
                 reason: err.to_string()
             });
@@ -134,7 +135,7 @@ impl Command for ExecuteCommand {
         }
     }
 
-    fn execute_redirected_io(&self, input: &str) -> Result<(i32, String), CommandError> {
+    fn execute_redirected_io(&self, input: Vec<u8>) -> Result<(i32, Vec<u8>), CommandError> {
         let mut child_result = self.create_command()?
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -152,17 +153,15 @@ impl Command for ExecuteCommand {
             .take()
             .expect("stdin should be available since stdin has been set to piped");
 
-        if let Err(err) = stdin.write(input.as_bytes()) {
+        if let Err(err) = stdin.write(input.as_slice()) {
             return Err(CommandError::CouldNotExecute {
                 reason: err.to_string()
             });
         }
 
-        let input_clone = String::from(input);
-
-        std::thread::spawn(move || {
-            stdin.write_all(input_clone.as_bytes()).expect("failed to write to stdin");
-        });
+         std::thread::spawn(move || {
+             stdin.write_all(input.as_slice()).expect("failed to write to stdin");
+         });
 
         return match child.wait_with_output() {
             Err(err) => Err(
@@ -172,7 +171,7 @@ impl Command for ExecuteCommand {
             ),
             Ok(output) => Ok((
                 output.status.code().expect("Process code should be available since the process exited"),
-                String::from_utf8(output.stdout).expect("invalid utf8")
+                output.stdout
             ))
         }
     }

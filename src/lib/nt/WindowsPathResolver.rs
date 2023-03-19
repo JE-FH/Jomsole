@@ -7,8 +7,8 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::path::{Path, PathBuf};
 use std::thread::current;
 use log::{debug, info};
-use crate::lib::Command::CommandError;
-use super::super::PathResolver::{PathResolver};
+use crate::lib::Trait::Command::CommandError;
+use crate::lib::Trait::PathResolver::PathResolver;
 
 pub struct WindowsPathResolver {
     path: Vec<OsString>,

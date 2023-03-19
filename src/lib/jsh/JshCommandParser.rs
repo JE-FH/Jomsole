@@ -1,10 +1,14 @@
 use std::rc::Rc;
 use pest::{Parser, iterators::Pairs, iterators::Pair};
+use crate::lib::Commands::BuiltinCommand::BuiltinCommand;
 
-use crate::lib::{CommandParser::{CommandParser, CommandParserError}, Command::Command, Commands::ExecuteCommand::ExecuteCommand};
-use crate::lib::Commands::ExecuteCommand::CommandScope;
+use crate::lib::Commands::ExecuteCommand::{CommandScope, ExecuteCommand};
 use crate::lib::Commands::PipeCommand::PipeCommand;
-use crate::lib::PathResolver::PathResolver;
+use crate::lib::JshCommandRepository::JshCommandRepository;
+use crate::lib::Trait::BuiltinCommandRepository::BuiltinCommandRepository;
+use crate::lib::Trait::Command::Command;
+use crate::lib::Trait::CommandParser::{CommandParser, CommandParserError};
+use crate::lib::Trait::PathResolver::PathResolver;
 
 #[derive(Debug, Clone)]
 pub struct JshCommandParserError {
@@ -23,8 +27,9 @@ impl CommandParserError for JshCommandParserError {
     }
 }
 
-pub struct JshCommandParser {
-	path_resolver: Rc<dyn PathResolver>
+pub struct JshCommandParser<TBuiltinCommandRepository: BuiltinCommandRepository> {
+	path_resolver: Rc<dyn PathResolver>,
+	builtin_command_repository: Rc<TBuiltinCommandRepository>
 }
 
 macro_rules! get_next_or_err {
@@ -52,10 +57,14 @@ fn assert_rule_type(pair: &Pair<Rule>, rule: Rule, error: &str) -> Result<(), Js
 	return Ok(());
 }
 
-impl JshCommandParser {
-	pub fn new(path_resolver: Rc<dyn PathResolver>) -> JshCommandParser {
+impl<TBuiltinCommandRepository: BuiltinCommandRepository> JshCommandParser<TBuiltinCommandRepository> {
+	pub fn new(
+		path_resolver: Rc<dyn PathResolver>,
+		builtin_command_repository: Rc<TBuiltinCommandRepository>
+	) -> JshCommandParser<TBuiltinCommandRepository> {
 		return JshCommandParser {
-			path_resolver: path_resolver
+			path_resolver: path_resolver,
+			builtin_command_repository: builtin_command_repository
 		};
 	}
 
@@ -112,7 +121,14 @@ impl JshCommandParser {
 			}
 			arguments.push(self.parse_argument(command)?);
 		}
-
+		if command_scope == CommandScope::ANY {
+			match self.builtin_command_repository.lookup_command(&command_name) {
+				Some(command) => {
+					return Ok(Box::new(BuiltinCommand::new(command, arguments)));
+				},
+				None => ()
+			};
+		}
 		return Ok(Box::new(ExecuteCommand::new(command_name, command_scope, arguments, self.path_resolver.clone())));
 	}
 
@@ -165,7 +181,9 @@ impl JshCommandParser {
 	}
 }
 
-impl CommandParser for JshCommandParser {
+impl<
+	TBuiltinCommandRepository: BuiltinCommandRepository
+> CommandParser for JshCommandParser<TBuiltinCommandRepository> {
 	type TCommandParserError = JshCommandParserError;
 
 	fn parse_command(&self, command: &str) -> Result<Box<dyn Command>, JshCommandParserError> {
