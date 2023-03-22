@@ -7,3 +7,5 @@ pub mod Trait;
 mod Commands;
 pub mod JshCommandRepository;
 pub mod Ecma48CommandInterface;
+pub mod UserSettingProvider;
+pub mod FileUserSettingProvider;

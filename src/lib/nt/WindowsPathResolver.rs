@@ -4,7 +4,7 @@ use std::ffi::{OsStr, OsString};
 use std::fs::read_dir;
 use std::io::BufRead;
 use std::os::windows::ffi::{OsStrExt, OsStringExt};
-use std::path::{Path, PathBuf};
+use std::path::{absolute, Path, PathBuf};
 use std::thread::current;
 use log::{debug, info};
 use crate::lib::Trait::Command::CommandError;

@@ -1,3 +1,4 @@
+#![feature(absolute_path)]
 mod lib;
 
 use std::env::{current_dir, set_current_dir};
@@ -10,6 +11,7 @@ use log::{debug, info, LevelFilter};
 
 use crate::lib::{DefaultContextGenerator, Jomsole::Jomsole, jsh::JshCommandParser::JshCommandParser};
 use crate::lib::Ecma48CommandInterface::Ecma48CommandInterface;
+use crate::lib::FileUserSettingProvider::FileUserSettingProvider;
 use crate::lib::JshCommandRepository::JshCommandRepository;
 use crate::lib::nt::WindowsPathResolver;
 use crate::lib::SimpleLogger::SimpleLogger;
