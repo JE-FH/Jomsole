@@ -1,0 +1,17 @@
+separator = _{" " | "\t"}
+disallowCharacters = _{" " | "|" | "\"" | "\t"}
+pathCharacter = _{ !disallowCharacters ~ ANY }
+disallowedQuotedCharacters = _{"\""}
+quotePathCharacter = _{!disallowedQuotedCharacters ~ ANY}
+localCommandPrefix = _{ "./"}
+quote = _{"\""}
+PlainArgument = { !quote ~ pathCharacter+ }
+QuotedContent = {quotePathCharacter*}
+QuotedArgument = { quote ~ QuotedContent ~ quote }
+Argument = { PlainArgument | QuotedArgument}
+LocalScopeCommand = { localCommandPrefix ~ PlainArgument }
+AnyScopeCommand = { !localCommandPrefix ~ Argument }
+ScopedCommand = { LocalScopeCommand | AnyScopeCommand }
+ExecuteCommand = {ScopedCommand ~ (separator+ ~ Argument)* }
+CommandComposition = { ExecuteCommand ~ separator* ~ SerialCommand?}
+SerialCommand = { "|" ~ separator* ~ CommandComposition}
