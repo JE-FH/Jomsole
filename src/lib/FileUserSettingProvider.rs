@@ -3,7 +3,7 @@ use std::fmt;
 use std::fs::{File, read_to_string};
 use std::path::Path;
 use toml::Table;
-use crate::lib::UserSettingProvider::{UserSettingProvider, WindowsCwdHandling};
+use crate::lib::Trait::UserSettingProvider::{UserSettingProvider, WindowsCwdHandling};
 
 #[derive(Debug)]
 pub struct ConfigReadingError {
@@ -37,12 +37,12 @@ pub struct FileUserSettingProvider {
 
 impl FileUserSettingProvider {
     pub fn from_file(path: &Path) -> Result<FileUserSettingProvider, ConfigReadingError> {
-        let configText = match read_to_string(path) {
+        let config_text = match read_to_string(path) {
             Ok(fileText) => fileText,
             Err(err) => return Err(ConfigReadingError::new(&err.to_string()))
         };
 
-        let parsed = match configText.parse::<Table>() {
+        let parsed = match config_text.parse::<Table>() {
             Ok(t) => t,
             Err(err) => return Err(ConfigReadingError::new(&err.to_string()))
         };

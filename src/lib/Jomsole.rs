@@ -1,20 +1,24 @@
 use std::{thread, time};
+use std::rc::Rc;
 use crate::lib::Trait::Command::CommandError;
 use crate::lib::Trait::CommandInterface::CommandInterface;
 use crate::lib::Trait::CommandParser::{CommandParser, CommandParserError};
 use crate::lib::Trait::ContextGenerator::ContextGenerator;
 use crate::lib::Trait::PathResolver::PathResolver;
+use crate::lib::Trait::UserSettingProvider::UserSettingProvider;
 
 pub struct Jomsole<
 	TCommandParser: CommandParser,
 	TCommandInterface: CommandInterface,
 	TPathResolver: PathResolver,
-	TContextGenerator: ContextGenerator
+	TContextGenerator: ContextGenerator,
+	TUserSettingProvider: UserSettingProvider
 > {
 	command_parser: TCommandParser,
 	command_interface: TCommandInterface,
 	path_resolver: TPathResolver,
-	context_generator: TContextGenerator
+	context_generator: TContextGenerator,
+	user_setting_provider: Rc<TUserSettingProvider>
 }
 
 impl<
@@ -22,18 +26,21 @@ impl<
 	TCommandInterface: CommandInterface,
 	TPathResolver: PathResolver,
 	TContextGenerator: ContextGenerator,
-> Jomsole<TCommandParser, TCommandInterface, TPathResolver, TContextGenerator> {
+	TUserSettingProvider: UserSettingProvider
+> Jomsole<TCommandParser, TCommandInterface, TPathResolver, TContextGenerator, TUserSettingProvider> {
 	pub fn new(
 		command_parser: TCommandParser,
 		command_interface: TCommandInterface,
 		path_resolver: TPathResolver,
-		context_generator: TContextGenerator
-	) -> Jomsole<TCommandParser, TCommandInterface, TPathResolver, TContextGenerator> {
+		context_generator: TContextGenerator,
+		user_setting_provider: Rc<TUserSettingProvider>
+	) -> Jomsole<TCommandParser, TCommandInterface, TPathResolver, TContextGenerator, TUserSettingProvider> {
 		return Jomsole {
 			command_parser: command_parser,
 			command_interface: command_interface,
 			path_resolver: path_resolver,
-			context_generator: context_generator
+			context_generator: context_generator,
+			user_setting_provider: user_setting_provider
 		};
 	}
 

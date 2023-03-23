@@ -13,9 +13,12 @@ use crate::lib::{DefaultContextGenerator, Jomsole::Jomsole, jsh::JshCommandParse
 use crate::lib::Ecma48CommandInterface::Ecma48CommandInterface;
 use crate::lib::FileUserSettingProvider::FileUserSettingProvider;
 use crate::lib::JshCommandRepository::JshCommandRepository;
+use crate::lib::nt::WindowsFileLocator::WindowsFileLocator;
 use crate::lib::nt::WindowsPathResolver;
 use crate::lib::SimpleLogger::SimpleLogger;
 use crate::lib::Trait::BuiltinCommandRepository::BuiltinCommandRepository;
+use crate::lib::Trait::FileLocator::FileLocator;
+use crate::lib::Trait::UserSettingProvider::UserSettingProvider;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 
@@ -25,6 +28,12 @@ extern crate pest_derive;
 fn main() {
     log::set_logger(&LOGGER)
         .map(|()| log::set_max_level(LevelFilter::Off));
+
+    let file_locator = if cfg!(windows) {
+        WindowsFileLocator::new()
+    } else {
+        panic!("Unsupported OS");
+    };
 
     let path_resolver = if cfg!(windows) {
         Rc::new(WindowsPathResolver::new())
@@ -134,7 +143,8 @@ fn main() {
         JshCommandParser::new(path_resolver, Rc::new(builtin_command_repo)),
         Ecma48CommandInterface::new(),
         WindowsPathResolver::new(),
-        DefaultContextGenerator::new()
+        DefaultContextGenerator::new(),
+        Rc::new(FileUserSettingProvider::from_file(file_locator.get_config_folder().as_path()).unwrap())
     );
 
     jomsole.run();
